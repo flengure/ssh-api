@@ -3,7 +3,7 @@
 ssh-api MCP stdio server
 
 Implements the MCP handshake and a single tool:
-- ssh.run: execute a non-interactive SSH command via OpenSSH client
+- ssh: execute a non-interactive SSH command via OpenSSH client
 
 Transport: JSON-RPC 2.0 over stdio (newline-delimited)
 """
@@ -250,7 +250,7 @@ def mcp_tools_list(_params: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "tools": [
             {
-                "name": "ssh.run",
+                "name": "ssh",
                 "description": "Execute a non-interactive SSH command and return stdout/stderr/exit_code.",
                 "inputSchema": SSH_RUN_INPUT_SCHEMA,
             }
@@ -273,7 +273,7 @@ def mcp_tools_call(params: Dict[str, Any]) -> Dict[str, Any]:
     name = params.get("name")
     arguments = params.get("arguments") or {}
 
-    if name != "ssh.run":
+    if name != "ssh":
         raise ValueError(f"Unknown tool: {name}")
 
     # Validate all parameters
