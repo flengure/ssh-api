@@ -5,6 +5,7 @@
 Transform the standard OpenSSH client into a modern API service. Execute SSH commands remotely through REST endpoints or integrate with AI assistants via Model Context Protocol (MCP).
 
 [![Docker](https://img.shields.io/badge/docker-available-blue)](https://hub.docker.com/r/flengure/ssh-api)
+[![GitHub Actions](https://github.com/flengure/ssh-api/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/flengure/ssh-api/actions)
 [![License](https://img.shields.io/badge/license-MIT-green)](#license)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io/)
 
