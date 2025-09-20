@@ -1,0 +1,25 @@
+services:
+    ssh-api:
+        container_name: ssh-api
+        build:
+            context: .
+            dockerfile: api/Dockerfile
+        image: ssh-api:latest
+        environment:
+            - JWT_SECRET=mysecret
+            - API_PORT=8090
+            - SSH_DIR=/home/runner/.ssh
+            - API_KEYS=supersecret123,anotherKey456 # optional
+        ports:
+            - "8090:8090"
+        volumes:
+            - ${SSH_API_SSH_DIR:-${HOME}/.ssh}:/home/runner/.ssh:ro
+        user: "1000:1000"
+        read_only: true
+        tmpfs: ["/tmp", "/run"]
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://127.0.0.1:8090/healthz"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        restart: unless-stopped

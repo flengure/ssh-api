@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(docker run:*)",
+      "Bash(chmod:*)",
+      "Bash(./test_deployment.sh)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

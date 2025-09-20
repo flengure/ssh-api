@@ -1,0 +1,180 @@
+openapi: "3.0.3"
+info:
+    title: ssh-api
+    version: "1.0.0"
+    description: |
+        Minimal HTTP → SSH bridge.
+        - Uses your mounted ~/.ssh when present, but it's optional.
+        - Auth: JWT (`Authorization: Bearer <token>`) or API key (`X-API-Key: <key>`).
+        - Health at `/healthz`. Docs at `/docs`. Spec at `/openapi.yaml`.
+
+paths:
+    /:
+        get:
+            summary: Service info
+            operationId: getRoot
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    ok: { type: boolean, example: true }
+                                    service: { type: string, example: ssh-api }
+                                    endpoints:
+                                        type: array
+                                        items: { type: string }
+                                        example:
+                                            [
+                                                "/run (POST)",
+                                                "/healthz (GET)",
+                                                "/docs (GET)",
+                                            ]
+
+    /healthz:
+        get:
+            summary: Health check
+            operationId: getHealthz
+            responses:
+                "200":
+                    description: Healthy
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    ok: { type: boolean, example: true }
+
+    /run:
+        post:
+            summary: Execute a non-interactive SSH command
+            operationId: postRun
+            security:
+                - bearerAuth: []
+                - apiKeyAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/RunRequest"
+                        examples:
+                            minimal:
+                                value: { host: hb, command: "uptime" }
+                            explicitUser:
+                                value:
+                                    {
+                                        host: 10.0.0.10,
+                                        user: ubuntu,
+                                        command: "df -h",
+                                    }
+                            advanced:
+                                value:
+                                    host: web1
+                                    command: "systemctl status nginx"
+                                    proxy_jump: bastion
+                                    strict_host_key_checking: accept-new
+                                    allocate_tty: false
+                                    extra_opts: ["-vv"]
+            responses:
+                "200":
+                    description: Command finished (see exit_code)
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RunResponse"
+                "400":
+                    description: Bad request
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Error" }
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Error" }
+                "504":
+                    description: SSH timed out
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Error" }
+
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+        apiKeyAuth:
+            type: apiKey
+            in: header
+            name: X-API-Key
+
+    schemas:
+        RunRequest:
+            type: object
+            required: [host, command]
+            properties:
+                host: { type: string, description: "SSH host or alias" }
+                command:
+                    {
+                        type: string,
+                        description: "Non-interactive command to execute",
+                    }
+                user:
+                    {
+                        type: string,
+                        description: "Optional. If omitted, ~/.ssh/config may define it.",
+                    }
+                port: { type: integer, description: "Optional SSH port" }
+                ssh_dir:
+                    {
+                        type: string,
+                        description: "Optional override for mounted SSH dir",
+                    }
+                timeout:
+                    {
+                        type: integer,
+                        description: "Client-side timeout (seconds)",
+                        default: 60,
+                    }
+                identity:
+                    {
+                        type: string,
+                        description: "Inline private key (PEM). Stored to temp and used via -i.",
+                    }
+                known_hosts:
+                    {
+                        type: string,
+                        description: "Inline known_hosts contents (overrides defaults)",
+                    }
+                strict_host_key_checking:
+                    type: string
+                    enum: [yes, no, accept-new]
+                    description: "Maps to -o StrictHostKeyChecking"
+                proxy_jump:
+                    {
+                        type: string,
+                        description: "Bastion or ProxyJump value (maps to -J)",
+                    }
+                allocate_tty: { type: boolean, description: "If true, adds -t" }
+                extra_opts:
+                    type: array
+                    description: "Advanced: raw ssh CLI options, each item one token (e.g., ['-vv','-o','Some=Value'])"
+                    items: { type: string }
+
+        RunResponse:
+            type: object
+            required: [exit_code, stdout, stderr, duration_seconds]
+            properties:
+                exit_code: { type: integer }
+                stdout: { type: string }
+                stderr: { type: string }
+                duration_seconds: { type: number, format: float }
+
+        Error:
+            type: object
+            properties:
+                error: { type: string }
